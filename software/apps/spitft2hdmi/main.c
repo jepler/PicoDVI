@@ -16,17 +16,15 @@
 #include "tmds_encode.h"
 #include "common_dvi_pin_configs.h"
 
-#include "wikimedia_christmas_tree_in_field_320x240_rgb565.h"
-
 #include "fourwire.pio.h"
-
-#define framebuf ((uint16_t*)wikimedia_christmas_tree_in_field_320x240)
 
 // DVDD 1.2V (1.1V seems ok too)
 #define FRAME_WIDTH 320
 #define FRAME_HEIGHT 240
 #define VREG_VSEL VREG_VOLTAGE_1_20
 #define DVI_TIMING dvi_timing_640x480p_60hz
+
+uint16_t framebuf[FRAME_WIDTH * FRAME_HEIGHT];
 
 #define BIT_DEPOSIT(b, i) ((b) ? (1<<(i)) : 0)
 #define BIT_EXTRACT(b, i) (((b) >> (i)) & 1)
@@ -183,7 +181,7 @@ next_command:
                             uint16_t pixel = DECODED() << 8;
                             GET_DATA();
                             pixel |= DECODED();
-                            framebuf[x + y * 320] = pixel;
+                            framebuf[x + y * FRAME_WIDTH] = pixel;
                         }
                     }
                 }
