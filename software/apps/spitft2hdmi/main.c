@@ -60,10 +60,10 @@ static int clamped(int x, int lo, int hi) {
     return x;
 }
 
-#define HANDLE_COMMAND(x) case ENCODED_COMMAND(x)
+#define GET_WORD() (word = pio_sm_get_blocking(pio, sm))
+#define GET_DATA() do { GET_WORD(); if(IS_COMMAND()) goto next_command; } while(0)
 #define IS_COMMAND() !(word & 0x2)
-#define IS_DATA() !IS_COMMAND()
-#define DECODED() (decode[word & ~0xaaaa])
+#define DECODED() (decode[word])
 
 static inline void __not_in_flash_func(_dvi_prepare_scanline_16bpp)(struct dvi_inst *inst, uint32_t *scanbuf) {
     uint32_t *tmdsbuf;
@@ -134,43 +134,35 @@ int main() {
 
     int x=0, y=0;
     while(true) {
-        word = pio_sm_get_blocking(pio, sm);
+        GET_WORD();
 next_command:
         switch(word) {
         case ENCODED_COMMAND(COMMAND_CASET):
-            word = pio_sm_get_blocking(pio, sm);
-            if(IS_COMMAND()) goto next_command;
-            bounds.x0h = decode[word];
+            GET_DATA();
+            bounds.x0h = DECODED();
 
-            word = pio_sm_get_blocking(pio, sm);
-            if(IS_COMMAND()) goto next_command;
-            bounds.x0l = decode[word];
+            GET_DATA();
+            bounds.x0l = DECODED();
 
-            word = pio_sm_get_blocking(pio, sm);
-            if(IS_COMMAND()) goto next_command;
-            bounds.x1h = decode[word];
+            GET_DATA();
+            bounds.x1h = DECODED();
 
-            word = pio_sm_get_blocking(pio, sm);
-            if(IS_COMMAND()) goto next_command;
-            bounds.x1l = decode[word];
+            GET_DATA();
+            bounds.x1l = DECODED();
             break;
 
         case ENCODED_COMMAND(COMMAND_PASET):
-            word = pio_sm_get_blocking(pio, sm);
-            if(IS_COMMAND()) goto next_command;
-            bounds.y0h = decode[word];
+            GET_DATA();
+            bounds.y0h = DECODED();
 
-            word = pio_sm_get_blocking(pio, sm);
-            if(IS_COMMAND()) goto next_command;
-            bounds.y0l = decode[word];
+            GET_DATA();
+            bounds.y0l = DECODED();
 
-            word = pio_sm_get_blocking(pio, sm);
-            if(IS_COMMAND()) goto next_command;
-            bounds.y1h = decode[word];
+            GET_DATA();
+            bounds.y1h = DECODED();
 
-            word = pio_sm_get_blocking(pio, sm);
-            if(IS_COMMAND()) goto next_command;
-            bounds.y1l = decode[word];
+            GET_DATA();
+            bounds.y1l = DECODED();
             break;
 
         case ENCODED_COMMAND(COMMAND_RAMWR):
@@ -187,14 +179,10 @@ next_command:
                 while(1) {
                     for(y=Y0; y<Y1; y++) {
                         for(x=X0; x<X1; x++) {
-                            word = pio_sm_get_blocking(pio, sm);
-                            if(IS_COMMAND()) goto next_command;
-
-                            uint16_t pixel = decode[word] << 8;
-                            word = pio_sm_get_blocking(pio, sm);
-                            if(IS_COMMAND()) goto next_command;
-
-                            pixel |= decode[word];
+                            GET_DATA();
+                            uint16_t pixel = DECODED() << 8;
+                            GET_DATA();
+                            pixel |= DECODED();
                             framebuf[x + y * 320] = pixel;
                         }
                     }
