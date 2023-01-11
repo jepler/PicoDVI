@@ -44,7 +44,7 @@
 
 struct dvi_inst dvi0;
 
-uint8_t decode[65536];
+uint8_t decode[256];
 
 struct {
     uint8_t x0h, x0l, x1h, x1l, y0h, y0l, y1h, y1l;
@@ -62,8 +62,8 @@ static int clamped(int x, int lo, int hi) {
 
 #define GET_WORD() (word = pio_sm_get_blocking(pio, sm))
 #define GET_DATA() do { GET_WORD(); if(IS_COMMAND()) goto next_command; } while(0)
-#define IS_COMMAND() !(word & 0x2)
-#define DECODED() (decode[word])
+#define IS_COMMAND() (!(word & 0x2))
+#define DECODED() (decode[(word & 0x55) | ((word >> 7) & 0xaa)])
 
 static inline void __not_in_flash_func(_dvi_prepare_scanline_16bpp)(struct dvi_inst *inst, uint32_t *scanbuf) {
     uint32_t *tmdsbuf;
@@ -105,15 +105,15 @@ int main() {
 
     setup_default_uart();
 
-    for(int i=0; i<65536; i++) {
+    for(int i=0; i<256; i++) {
         int j = (BIT_MOVE(i,  0, 0)) |
                 (BIT_MOVE(i,  2, 1)) |
                 (BIT_MOVE(i,  4, 2)) |
                 (BIT_MOVE(i,  6, 3)) |
-                (BIT_MOVE(i,  8, 4)) |
-                (BIT_MOVE(i, 10, 5)) |
-                (BIT_MOVE(i, 12, 6)) |
-                (BIT_MOVE(i, 14, 7));
+                (BIT_MOVE(i,  1, 4)) |
+                (BIT_MOVE(i,  3, 5)) |
+                (BIT_MOVE(i,  5, 6)) |
+                (BIT_MOVE(i,  7, 7));
         decode[i] = j;
     }
 
@@ -130,7 +130,7 @@ int main() {
     uint sm = pio_claim_unused_sm(pio, true);
     fourwire_program_init(pio, sm, offset, 18, 21);
 
-    int word = 0;
+    uint16_t word = 0;
 
     int x=0, y=0;
     while(true) {
